@@ -8,6 +8,7 @@ public class PlayerController : MonoBehaviour
 {
     /*Private Variables*/
     private Rigidbody2D rb;
+    private BetterJump betterJump;
     [SerializeField] private GraplingGun gun;
 
     /*Input variables*/
@@ -41,6 +42,7 @@ public class PlayerController : MonoBehaviour
     public bool onLeftWall;
     public bool wallJumped;
     public bool grappled;
+    public bool grappleJump;
 
     [Space]
     [Header("Visualization")]
@@ -51,7 +53,7 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        gun.Joint = GetComponent<SpringJoint2D>();
+        betterJump = GetComponent<BetterJump>();
     }
 
     private void Start()
@@ -85,27 +87,34 @@ public class PlayerController : MonoBehaviour
                 rb.velocity = new Vector2(rb.velocity.x , rb.velocity.y);
         }
 
-        if (jumpRequested && grounded)
-            Jump(Vector2.up);
-
-        if (jumpRequested && grappled) 
+        if (!grounded && grappleRequested && !grappled) 
         {
-            StopGrapple();
-            Jump(Vector2.up);
+            grappled = gun.Grapple();
+            canMove = !grappled;
         }
 
-        if (airborne && grappleRequested)
+        if (grappled && jumpRequested) 
         {
-            RequestGrapple();
+            grappled = !gun.StopGrapple();
+            canMove = !grappled;
+            grappleJump = true;
+            Jump(Vector2.up);
         }
 
         if (grappled && grappleRelease) 
         {
-            StopGrapple();
+            grappled = !gun.StopGrapple();
+            canMove = !grappled;
         }
 
-        if (grounded)
+        if (jumpRequested && grounded)
+            Jump(Vector2.up);
+
+        if (grounded) 
+        {
+            grappleJump = false;
             wallJumped = false;
+        }
     }
 
     private void CheckInput() 
@@ -133,30 +142,18 @@ public class PlayerController : MonoBehaviour
     {
         if (!canMove) return;
 
-        if (!wallJumped)
+        if (!wallJumped && !grappleJump)
             rb.velocity = new Vector2(direction * speed , rb.velocity.y);
-        else
+        else if (wallJumped)
             rb.velocity = Vector2.Lerp(rb.velocity , (new Vector2(direction * speed , rb.velocity.y)) , wallJumpLerp * Time.deltaTime);
+        else if (grappleJump)
+            rb.velocity += new Vector2(direction * speed * Time.deltaTime , 0);
     }
 
     private void Jump(Vector2 dir)
     {
         rb.velocity = new Vector2(rb.velocity.x , 0);
         rb.velocity += dir * jumpForce;
-    }
-
-    private void RequestGrapple() 
-    {
-        grappled = gun.StartGrapple(new Vector2(horMovement , verMovement));
-        rb.AddForce(new Vector2(horMovement , verMovement) * gun.launchSpeed);
-        canMove = !grappled;
-    }
-
-    private void StopGrapple() 
-    {
-        gun.StopGrapple();
-        grappled = false;
-        canMove = true;
     }
 
     IEnumerator DisableMovement(float time) 
