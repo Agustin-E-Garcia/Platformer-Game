@@ -6,6 +6,8 @@ public class PlayerController : MonoBehaviour
     /*Private Variables*/
     private Rigidbody2D rb;
     private BetterJump betterJump;
+    private Animator anim;
+    private SpriteRenderer rend;
     [SerializeField] private GraplingGun gun;
 
     /*Input variables*/
@@ -51,6 +53,8 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         betterJump = GetComponent<BetterJump>();
+        anim = GetComponent<Animator>();
+        rend = GetComponent<SpriteRenderer>();
     }
 
     private void Start()
@@ -62,8 +66,11 @@ public class PlayerController : MonoBehaviour
     {
         CheckInput();
         CheckCollisions();
+        UpdateAnimationValues();
 
         Move(horMovement);
+        FlipSprite(horMovement);
+
 
         if (onWall && !grounded && canMove) 
         {
@@ -112,6 +119,21 @@ public class PlayerController : MonoBehaviour
             grappleJump = false;
             wallJumped = false;
         }
+    }
+
+    private void UpdateAnimationValues() 
+    {
+        anim.SetBool("Walking" , horMovement != 0 ? true : false);
+        anim.SetBool("Airborne" , airborne);
+        anim.SetBool("Grapple" , grappled);
+    }
+
+    private void FlipSprite(float direction) 
+    {
+        if (direction < 0)
+            rend.flipX = true;
+        else         
+            rend.flipX = false;
     }
 
     /// <summary>
